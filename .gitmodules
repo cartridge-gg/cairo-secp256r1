@@ -1,0 +1,3 @@
+[submodule "research_uint384_cairo"]
+	url = https://github.com/NethermindEth/research-uint384-cairo
+	path = lib/research_uint384_cairo
