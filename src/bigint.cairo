@@ -1,61 +1,7 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
-from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from starkware.cairo.common.cairo_secp.constants import BASE
-from src.param_def import P0, P1, P2
-
-# Returns a BigInt3 instance whose value is controlled by a prover hint.
-#
-# Soundness guarantee: each limb is in the range [0, 3 * BASE).
-# Completeness guarantee (honest prover): the value is in reduced form and in particular,
-# each limb is in the range [0, BASE).
-#
-# Hint arguments: value.
-func nondet_bigint3{range_check_ptr}() -> (res : BigInt3):
-    # The result should be at the end of the stack after the function returns.
-    let res : BigInt3 = [cast(ap + 5, BigInt3*)]
-    %{
-        from starkware.cairo.common.cairo_secp.secp_utils import split
-        segments.write_arg(ids.res.address_, split(value))
-    %}
-    # The maximal possible sum of the limbs, assuming each of them is in the range [0, BASE).
-    const MAX_SUM = 3 * (BASE - 1)
-    assert [range_check_ptr] = MAX_SUM - (res.d0 + res.d1 + res.d2)
-
-    # Prepare the result at the end of the stack.
-    tempvar range_check_ptr = range_check_ptr + 4
-    [range_check_ptr - 3] = res.d0; ap++
-    [range_check_ptr - 2] = res.d1; ap++
-    [range_check_ptr - 1] = res.d2; ap++
-    static_assert &res + BigInt3.SIZE == ap
-    return (res=res)
-end
-
-# Returns (x - y) % P
-func bigint_sub_mod{range_check_ptr}(x: BigInt3, y: BigInt3, P: BigInt3) -> (res: BigInt3):
-    let z = UnreducedBigInt5(
-        d0 = x.d0 - y.d0,
-        d1 = x.d1 - y.d1,
-        d2 = x.d2 - y.d2,
-        d3 = 0,
-        d4 = 0
-    )
-
-    let (res) = bigint_div_mod(z, UnreducedBigInt3(1, 0, 0), P)
-    return (res = res)
-end
-
-func bigint_mul(x: BigInt3, y: BigInt3) -> (res: UnreducedBigInt5):
-    return (
-        UnreducedBigInt5(
-            d0 = x.d0 * y.d0,
-            d1 = x.d0 * y.d1 + x.d1 * y.d0,
-            d2 = x.d0 * y.d2 + x.d1 * y.d1 + x.d2 * y.d0,
-            d3 = x.d1 * y.d2 + x.d2 * y.d1,
-            d4 = x.d2 * y.d2
-        )
-    )
-end
 
 func bigint_mul_u(x: UnreducedBigInt3, y: BigInt3) -> (res: UnreducedBigInt5):
     return (

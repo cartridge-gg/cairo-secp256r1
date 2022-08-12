@@ -1,18 +1,12 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
-from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from starkware.cairo.common.cairo_secp.constants import BASE
+from starkware.cairo.common.cairo_secp.ec import EcPoint
 
-from src.bigint import nondet_bigint3, bigint_mul, bigint_div_mod, bigint_sub_mod, verify_urbigint5_zero
+from src.bigint import bigint_div_mod, verify_urbigint5_zero
 from src.field import verify_urbigInt3_zero, is_urbigInt3_zero
 from src.param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
-
-# Represents a point on the elliptic curve.
-# The zero point is represented using pt.x=0, as there is no point on the curve with this x value.
-struct EcPoint:
-    member x : BigInt3
-    member y : BigInt3
-end
 
 # Returns the slope of the elliptic curve at the given point.
 # The slope is used to compute pt + pt.
@@ -174,31 +168,32 @@ end
 
 # Given 0 <= m < 250, a scalar and a point on the elliptic curve, pt,
 # verifies that 0 <= scalar < 2**m and returns (2**m * pt, scalar * pt).
-func ec_mul_inner{range_check_ptr}(pt : EcPoint, scalar : felt, m : felt) -> (
+func ec_mul_inner{range_check_ptr}(point : EcPoint, scalar : felt, m : felt) -> (
         pow2 : EcPoint, res : EcPoint):
     
     if m == 0:
-        assert scalar = 0
+        with_attr error_message("Too large scalar"):
+            scalar = 0
+        end
         let ZERO_POINT = EcPoint(BigInt3(0, 0, 0), BigInt3(0, 0, 0))
-        return (pow2=pt, res=ZERO_POINT)
+        return (pow2=point, res=ZERO_POINT)
     end
-    
+
     alloc_locals
-    let (double_pt : EcPoint) = ec_double(pt)
+    let (double_pt : EcPoint) = ec_double(point)
     %{ memory[ap] = (ids.scalar % PRIME) % 2 %}
-    
     jmp odd if [ap] != 0; ap++
-    return ec_mul_inner(pt=double_pt, scalar=scalar / 2, m=m - 1)
+    return ec_mul_inner(point=double_pt, scalar=scalar / 2, m=m - 1)
     
     odd:
     let (local inner_pow2 : EcPoint, inner_res : EcPoint) = ec_mul_inner(
-        pt=double_pt, scalar=(scalar - 1) / 2, m=m - 1)
+        point=double_pt, scalar=(scalar - 1) / 2, m=m - 1)
     # Here inner_res = (scalar - 1) / 2 * double_pt = (scalar - 1) * pt.
     # Assume pt != 0 and that inner_res = ±pt. We obtain (scalar - 1) * pt = ±pt =>
     # scalar - 1 = ±1 (mod N) => scalar = 0 or 2.
     # In both cases (scalar - 1) / 2 cannot be in the range [0, 2**(m-1)), so we get a
     # contradiction.
-    let (res : EcPoint) = fast_ec_add(pt0=pt, pt1=inner_res)
+    let (res : EcPoint) = fast_ec_add(pt0=point, pt1=inner_res)
     return (pow2=inner_pow2, res=res)
 end
 

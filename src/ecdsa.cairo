@@ -10,7 +10,8 @@ from src.param_def import  N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2
 from src.ec import ec_add, ec_mul, verify_point
 
 
-# Verifies that val is in the range [1, N).
+# Verifies that val is in the range [1, N) and that the limbs of val are in the range [0, BASE).
+# Taken from: https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/cairo/common/cairo_secp/signature.cairo#L85
 func validate_signature_entry{range_check_ptr}(val : BigInt3):
     assert_nn_le(val.d2, N2)
     assert_nn_le(val.d1, BASE - 1)
@@ -25,9 +26,9 @@ func validate_signature_entry{range_check_ptr}(val : BigInt3):
         return ()
     end
 
+    # Check that val > 0.
     if val.d2 == 0:
         if val.d1 == 0:
-            # Make sure val > 0.
             assert_not_zero(val.d0)
             return ()
         end
@@ -42,8 +43,11 @@ func verify_ecdsa{range_check_ptr}(
         public_key_pt : EcPoint, msg_hash : BigInt3, r : BigInt3, s : BigInt3):
     alloc_locals
     verify_point(public_key_pt)
-    validate_signature_entry(r)
-    validate_signature_entry(s)
+
+    with_attr error_message("Signature out of range."):
+        validate_signature_entry(r)
+        validate_signature_entry(s)
+    end
 
     let gen_pt = EcPoint(
         BigInt3(GX0, GX1, GX2),
