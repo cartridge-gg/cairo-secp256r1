@@ -1,36 +1,8 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
-from src.param_def import BASE, P0, P1, P2
-
-# Represents an integer defined by
-#   d0 + BASE * d1 + BASE**2 * d2.
-# Note that the limbs (d_i) are NOT restricted to the range [0, BASE) and in particular they
-# can be negative.
-# In most cases this is used to represent a elliptic curve field element.
-struct UnreducedBigInt3:
-    member d0 : felt
-    member d1 : felt
-    member d2 : felt
-end
-
-# Same as UnreducedBigInt3, except that d0, d1 and d2 must be in the range [0, 3 * BASE).
-# In most cases this is used to represent a elliptic curve field element.
-struct BigInt3:
-    member d0 : felt
-    member d1 : felt
-    member d2 : felt
-end
-
-# Represents a big integer: sum_i(BASE**i * d_i).
-# Note that the limbs (d_i) are NOT restricted to the range [0, BASE) and in particular they
-# can be negative.
-struct UnreducedBigInt5:
-    member d0 : felt
-    member d1 : felt
-    member d2 : felt
-    member d3 : felt
-    member d4 : felt
-end
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.constants import BASE
+from src.param_def import P0, P1, P2
 
 # Returns a BigInt3 instance whose value is controlled by a prover hint.
 #

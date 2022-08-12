@@ -2,9 +2,6 @@
 
 # The domain paramters of elliptic curve.
 
-# The base of the representation.
-const BASE = 2 ** 86
-
 # NIST P-256
 const P0 = 0x3fffffffffffffffffffff
 const P1 = 0x3ff

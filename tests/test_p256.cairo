@@ -1,8 +1,8 @@
 %lang starknet
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_secp.bigint import BigInt3
+from starkware.cairo.common.cairo_secp.ec import EcPoint
 
-from src.bigint import BigInt3
-from src.ec import EcPoint
 from src.ecdsa import verify_ecdsa
 
 @view

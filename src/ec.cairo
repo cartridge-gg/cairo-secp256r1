@@ -1,8 +1,11 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
-from src.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul, bigint_div_mod, bigint_sub_mod, verify_urbigint5_zero
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.constants import BASE
+
+from src.bigint import nondet_bigint3, bigint_mul, bigint_div_mod, bigint_sub_mod, verify_urbigint5_zero
 from src.field import verify_urbigInt3_zero, is_urbigInt3_zero
-from src.param_def import BASE, P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
+from src.param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 
 # Represents a point on the elliptic curve.
 # The zero point is represented using pt.x=0, as there is no point on the curve with this x value.

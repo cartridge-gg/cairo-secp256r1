@@ -1,7 +1,10 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
-from src.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, bigint_div_mod, verify_urbigint5_zero
-from src.param_def import BASE
+from starkware.cairo.common.math import assert_nn_le, assert_not_zero
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.constants import BASE
+
+from src.bigint import bigint_div_mod, verify_urbigint5_zero
 
 func verify_urbigInt3_zero{range_check_ptr}(val : UnreducedBigInt3, n : BigInt3):
     verify_urbigint5_zero(UnreducedBigInt5(d0=val.d0, d1=val.d1, d2=val.d2, 0, 0), n)

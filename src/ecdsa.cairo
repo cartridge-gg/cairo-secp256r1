@@ -1,10 +1,13 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
 from starkware.cairo.common.math import assert_nn_le, assert_not_zero
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.constants import BASE
+from starkware.cairo.common.cairo_secp.ec import EcPoint
 
-from src.bigint import BASE, BigInt3, UnreducedBigInt5, UnreducedBigInt3, bigint_div_mod
+from src.bigint import bigint_div_mod
 from src.param_def import  N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2
-from src.ec import EcPoint, ec_add, ec_mul, verify_point
+from src.ec import ec_add, ec_mul, verify_point
 
 
 # Verifies that val is in the range [1, N).
