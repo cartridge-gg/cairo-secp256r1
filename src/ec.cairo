@@ -11,7 +11,7 @@ from starkware.cairo.common.cairo_secp.field import (
 )
 
 from src.bigint import bigint_div_mod, verify_urbigint5_zero
-from src.field import verify_urbigInt3_zero, is_urbigInt3_zero
+from src.field import is_urbigInt3_zero
 from src.param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 
 # Computes the slope of the elliptic curve at a given point.
@@ -224,31 +224,35 @@ func fast_ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, P : BigInt
     return (EcPoint(new_x, new_y))
 end
 
-# Same as fast_ec_add, except that the cases pt0 = ±pt1 are supported.
-func ec_add{range_check_ptr}(pt0 : EcPoint, pt1 : EcPoint) -> (res : EcPoint):
-    
+# Same as fast_ec_add, except that the cases point0 = +/-point1 are supported.
+func ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint) -> (res : EcPoint):
+    let x_diff = BigInt3(
+        d0=point0.x.d0 - point1.x.d0, d1=point0.x.d1 - point1.x.d1, d2=point0.x.d2 - point1.x.d2
+    )
     let P = BigInt3(P0, P1, P2)
-    let x_diff = BigInt3(d0=pt0.x.d0 - pt1.x.d0, d1=pt0.x.d1 - pt1.x.d1, d2=pt0.x.d2 - pt1.x.d2)
-    let (same_x : felt) = is_urbigInt3_zero(x_diff, P)
+    let (same_x : felt) = is_zero(x_diff)
     if same_x == 0:
-        # pt0.x != pt1.x so we can use fast_ec_add.
-        return fast_ec_add(pt0, pt1, P)
+        # point0.x != point1.x so we can use fast_ec_add.
+        return fast_ec_add(point0, point1, P)
     end
-    
-    # We have pt0.x = pt1.x. This implies pt0.y = ±pt1.y.
-    # Check whether pt0.y = -pt1.y.
-    let y_sum = BigInt3(d0=pt0.y.d0 + pt1.y.d0, d1=pt0.y.d1 + pt1.y.d1, d2=pt0.y.d2 + pt1.y.d2)
-    let (opposite_y : felt) = is_urbigInt3_zero(y_sum, P)
+
+    # We have point0.x = point1.x. This implies point0.y = +/-point1.y.
+    # Check whether point0.y = -point1.y.
+    let y_sum = BigInt3(
+        d0=point0.y.d0 + point1.y.d0, d1=point0.y.d1 + point1.y.d1, d2=point0.y.d2 + point1.y.d2
+    )
+    let (opposite_y : felt) = is_zero(y_sum)
     if opposite_y != 0:
-        # pt0.y = -pt1.y.
-        # Note that the case pt0 = pt1 = 0 falls into this branch as well.
+        # point0.y = -point1.y.
+        # Note that the case point0 = point1 = 0 falls into this branch as well.
         let ZERO_POINT = EcPoint(BigInt3(0, 0, 0), BigInt3(0, 0, 0))
         return (ZERO_POINT)
     else:
-        # pt0.y = pt1.y.
-        return ec_double(pt0, P)
+        # point0.y = point1.y.
+        return ec_double(point0, P)
     end
 end
+
 
 # Given a scalar, an integer m in the range [0, 250), and a point on the elliptic curve, point,
 # verifies that 0 <= scalar < 2**m and returns (2**m * point, scalar * point).
