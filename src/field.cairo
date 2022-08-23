@@ -67,11 +67,11 @@ end
 func unreduced_mul(a : BigInt3, b : BigInt3, secp_rem : felt) -> (res_low : UnreducedBigInt3):
     # The result of the product is:
     #   sum_{i, j} a.d_i * b.d_j * BASE**(i + j)
-    # Since we are computing it mod secp256r1_prime, we replace the term
+    # Since we are computing it mod secp256k1, we replace the term
     #   a.d_i * b.d_j * BASE**(i + j)
     # where i + j >= 3 with
     #   a.d_i * b.d_j * BASE**(i + j - 3) * 4 * secp_rem
-    # since BASE ** 3 = 4 * secp_rem (mod secp256r1_prime).
+    # since BASE ** 3 = 4 * secp_rem (mod secp256k1).
     return (
         UnreducedBigInt3(
         d0=a.d0 * b.d0 + (a.d1 * b.d2 + a.d2 * b.d1) * (4 * secp_rem),
@@ -118,9 +118,9 @@ func is_zero{range_check_ptr}(x : BigInt3, p : BigInt3, secp_rem : felt) -> (res
     let (x_x_inv) = unreduced_mul(x, x_inv, secp_rem)
 
     # Check that x * x_inv = 1 to verify that x != 0.
-    # verify_zero(UnreducedBigInt3(
-    #     d0=x_x_inv.d0 - 1,
-    #     d1=x_x_inv.d1,
-    #     d2=x_x_inv.d2), p, secp_rem)
+    verify_zero(UnreducedBigInt3(
+        d0=x_x_inv.d0 - 1,
+        d1=x_x_inv.d1,
+        d2=x_x_inv.d2), p, secp_rem)
     return (res=0)
 end

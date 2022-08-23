@@ -5,7 +5,7 @@ from starkware.cairo.common.cairo_secp.bigint import BigInt3
 from starkware.cairo.common.cairo_secp.ec import EcPoint
 
 from src.ec import compute_doubling_slope, compute_slope
-from src.param_def import P0, P1, P2, A0, A1, A2
+from src.secp256r1 import P0, P1, P2, A0, A1, A2, SECP_REM
 
 @view
 func test_compute_doubling_slope{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}():
@@ -14,20 +14,21 @@ func test_compute_doubling_slope{syscall_ptr : felt*, range_check_ptr, pedersen_
     let point = EcPoint(
         BigInt3(52227620040540588600771222, 33347259622618539004134583, 8091721874918813684698062),
         BigInt3(59685082318776612195095029, 54599710628478995760242092, 6036146923926000695307902))
-    compute_doubling_slope(point, p, a)
+    compute_doubling_slope(point, p, a, SECP_REM)
     return ()
 end
 
 @view
 func test_compute_slope{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}():
     let p = BigInt3(P0, P1, P2)
+    
     let x = EcPoint(
-        BigInt3(52227620040540588600771222, 33347259622618539004134583, 8091721874918813684698062),
-        BigInt3(59685082318776612195095029, 54599710628478995760242092, 6036146923926000695307902))
+        BigInt3(18742262007655976083952094, 2170278475068009573293424, 1076302195906477591003722),
+        BigInt3(34244297358526317143979340, 57839944361682288439803986, 1507246073876674611658538))
     let y = EcPoint(
-        BigInt3(52227620040540588600771222, 33347259622618539004134583, 8091721874918813684698062),
-        BigInt3(59685082318776612195095029, 54599710628478995760242092, 6036146923926000695307902))
-    compute_slope(x, y, p)
+        BigInt3(65152262866761155910162282, 40340684474627089544018536, 626417993928619776535656),
+        BigInt3(53436004282169687511911968, 8831389139754503123655424, 6070908525652947743172841))
+    compute_slope(x, y, p, SECP_REM)
     return ()
 end
 

@@ -5,7 +5,6 @@ from starkware.cairo.common.cairo_secp.constants import BASE
 from starkware.cairo.common.cairo_secp.ec import EcPoint
 
 from src.bigint import bigint_div_mod, verify_urbigint5_zero
-from src.param_def import P0, P1, P2, N0, N1, N2, A0, A1, A2, GX0, GX1, GX2, GY0, GY1, GY2
 from src.field import verify_zero, is_zero, unreduced_mul, unreduced_sqr
 
 # Computes the slope of the elliptic curve at a given point.
@@ -30,7 +29,6 @@ func compute_doubling_slope{range_check_ptr}(point : EcPoint, p : BigInt3, a : B
         y = pack(ids.point.y, PRIME)
         p = pack(ids.p, PRIME)
         a = pack(ids.a, PRIME)
-        # print(x, y, p, a)
         value = slope = ec_double_slope(point=(x, y), alpha=a, p=p)
     %}
     let (slope : BigInt3) = nondet_bigint3()
@@ -38,12 +36,12 @@ func compute_doubling_slope{range_check_ptr}(point : EcPoint, p : BigInt3, a : B
     let (x_sqr : UnreducedBigInt3) = unreduced_sqr(point.x, secp_rem)
     let (slope_y : UnreducedBigInt3) = unreduced_mul(slope, point.y, secp_rem)
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=3 * x_sqr.d0 + a.d0 - 2 * slope_y.d0,
-    #     d1=3 * x_sqr.d1 + a.d1 - 2 * slope_y.d1,
-    #     d2=3 * x_sqr.d2 + a.d2 - 2 * slope_y.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=3 * x_sqr.d0 + a.d0 - 2 * slope_y.d0,
+        d1=3 * x_sqr.d1 + a.d1 - 2 * slope_y.d1,
+        d2=3 * x_sqr.d2 + a.d2 - 2 * slope_y.d2), p, secp_rem
+    )
 
     return (slope=slope)
 end
@@ -71,10 +69,6 @@ func compute_slope{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigI
         x1 = pack(ids.point1.x, PRIME)
         y1 = pack(ids.point1.y, PRIME)
         p = pack(ids.p, PRIME)
-        # print("p0x", ids.point0.x.d0, ids.point0.x.d1, ids.point0.x.d2)
-        # print("p0y", ids.point0.y.d0, ids.point0.y.d1, ids.point0.y.d2)
-        # print("p1x", ids.point1.x.d0, ids.point1.x.d1, ids.point1.x.d2)
-        # print("p1y", ids.point1.y.d0, ids.point1.y.d1, ids.point1.y.d2)
         value = slope = line_slope(point1=(x0, y0), point2=(x1, y1), p=p)
     %}
     let (slope) = nondet_bigint3()
@@ -84,12 +78,12 @@ func compute_slope{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigI
     )
     let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(x_diff, slope, secp_rem)
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=x_diff_slope.d0 - point0.y.d0 + point1.y.d0,
-    #     d1=x_diff_slope.d1 - point0.y.d1 + point1.y.d1,
-    #     d2=x_diff_slope.d2 - point0.y.d2 + point1.y.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=x_diff_slope.d0 - point0.y.d0 + point1.y.d0,
+        d1=x_diff_slope.d1 - point0.y.d1 + point1.y.d1,
+        d2=x_diff_slope.d2 - point0.y.d2 + point1.y.d2), p, secp_rem
+    )
 
     return (slope)
 end
@@ -101,7 +95,7 @@ end
 #
 # Returns:
 #   res - a point representing point + point.
-func ec_double{range_check_ptr}(point : EcPoint, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
+func ec_double{range_check_ptr}(point : EcPoint, a : BigInt3, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
     # The zero point.
     if point.x.d0 == 0:
         if point.x.d1 == 0:
@@ -111,7 +105,6 @@ func ec_double{range_check_ptr}(point : EcPoint, p : BigInt3, secp_rem : felt) -
         end
     end
 
-    let a = BigInt3(A0, A1, A2)
     let (slope : BigInt3) = compute_doubling_slope(point, p, a, secp_rem)
     let (slope_sqr : UnreducedBigInt3) = unreduced_sqr(slope, secp_rem)
 
@@ -129,23 +122,23 @@ func ec_double{range_check_ptr}(point : EcPoint, p : BigInt3, secp_rem : felt) -
     %{ value = new_y = (slope * (x - new_x) - y) % p %}
     let (new_y : BigInt3) = nondet_bigint3()
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=slope_sqr.d0 - new_x.d0 - 2 * point.x.d0,
-    #     d1=slope_sqr.d1 - new_x.d1 - 2 * point.x.d1,
-    #     d2=slope_sqr.d2 - new_x.d2 - 2 * point.x.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=slope_sqr.d0 - new_x.d0 - 2 * point.x.d0,
+        d1=slope_sqr.d1 - new_x.d1 - 2 * point.x.d1,
+        d2=slope_sqr.d2 - new_x.d2 - 2 * point.x.d2), p, secp_rem
+    )
 
-    # let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(
-    #     BigInt3(d0=point.x.d0 - new_x.d0, d1=point.x.d1 - new_x.d1, d2=point.x.d2 - new_x.d2), slope, secp_rem
-    # )
+    let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(
+        BigInt3(d0=point.x.d0 - new_x.d0, d1=point.x.d1 - new_x.d1, d2=point.x.d2 - new_x.d2), slope, secp_rem
+    )
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=x_diff_slope.d0 - point.y.d0 - new_y.d0,
-    #     d1=x_diff_slope.d1 - point.y.d1 - new_y.d1,
-    #     d2=x_diff_slope.d2 - point.y.d2 - new_y.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=x_diff_slope.d0 - point.y.d0 - new_y.d0,
+        d1=x_diff_slope.d1 - point.y.d1 - new_y.d1,
+        d2=x_diff_slope.d2 - point.y.d2 - new_y.d2), p, secp_rem
+    )
 
     return (res=EcPoint(new_x, new_y))
 end
@@ -199,30 +192,30 @@ func fast_ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigInt
     %{ value = new_y = (slope * (x0 - new_x) - y0) % p %}
     let (new_y : BigInt3) = nondet_bigint3()
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=slope_sqr.d0 - new_x.d0 - point0.x.d0 - point1.x.d0,
-    #     d1=slope_sqr.d1 - new_x.d1 - point0.x.d1 - point1.x.d1,
-    #     d2=slope_sqr.d2 - new_x.d2 - point0.x.d2 - point1.x.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=slope_sqr.d0 - new_x.d0 - point0.x.d0 - point1.x.d0,
+        d1=slope_sqr.d1 - new_x.d1 - point0.x.d1 - point1.x.d1,
+        d2=slope_sqr.d2 - new_x.d2 - point0.x.d2 - point1.x.d2), p, secp_rem
+    )
 
     let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(
         BigInt3(d0=point0.x.d0 - new_x.d0, d1=point0.x.d1 - new_x.d1, d2=point0.x.d2 - new_x.d2),
         slope, secp_rem
     )
 
-    # verify_zero(
-    #     UnreducedBigInt3(
-    #     d0=x_diff_slope.d0 - point0.y.d0 - new_y.d0,
-    #     d1=x_diff_slope.d1 - point0.y.d1 - new_y.d1,
-    #     d2=x_diff_slope.d2 - point0.y.d2 - new_y.d2), p, secp_rem
-    # )
+    verify_zero(
+        UnreducedBigInt3(
+        d0=x_diff_slope.d0 - point0.y.d0 - new_y.d0,
+        d1=x_diff_slope.d1 - point0.y.d1 - new_y.d1,
+        d2=x_diff_slope.d2 - point0.y.d2 - new_y.d2), p, secp_rem
+    )
 
     return (EcPoint(new_x, new_y))
 end
 
 # Same as fast_ec_add, except that the cases point0 = +/-point1 are supported.
-func ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
+func ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, a : BigInt3, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
     let x_diff = BigInt3(
         d0=point0.x.d0 - point1.x.d0, d1=point0.x.d1 - point1.x.d1, d2=point0.x.d2 - point1.x.d2
     )
@@ -246,14 +239,14 @@ func ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigInt3, se
         return (ZERO_POINT)
     else:
         # point0.y = point1.y.
-        return ec_double(point0, p, secp_rem)
+        return ec_double(point0, a, p, secp_rem)
     end
 end
 
 
 # Given a scalar, an integer m in the range [0, 250), and a point on the elliptic curve, point,
 # verifies that 0 <= scalar < 2**m and returns (2**m * point, scalar * point).
-func ec_mul_inner{range_check_ptr}(point : EcPoint, scalar : felt, m : felt, p : BigInt3, secp_rem : felt) -> (
+func ec_mul_inner{range_check_ptr}(point : EcPoint, scalar : felt, m : felt, a : BigInt3, p : BigInt3, secp_rem : felt) -> (
     pow2 : EcPoint, res : EcPoint
 ):
     if m == 0:
@@ -265,14 +258,14 @@ func ec_mul_inner{range_check_ptr}(point : EcPoint, scalar : felt, m : felt, p :
     end
 
     alloc_locals
-    let (double_point : EcPoint) = ec_double(point, p, secp_rem)
+    let (double_point : EcPoint) = ec_double(point, a, p, secp_rem)
     %{ memory[ap] = (ids.scalar % PRIME) % 2 %}
     jmp odd if [ap] != 0; ap++
-    return ec_mul_inner(double_point, scalar / 2, m - 1, p, secp_rem)
+    return ec_mul_inner(double_point, scalar / 2, m - 1, a, p, secp_rem)
 
     odd:
     let (local inner_pow2 : EcPoint, inner_res : EcPoint) = ec_mul_inner(
-        double_point, (scalar - 1) / 2, m - 1, p, secp_rem
+        double_point, (scalar - 1) / 2, m - 1, a, p, secp_rem
     )
     # Here inner_res = (scalar - 1) / 2 * double_point = (scalar - 1) * point.
     # Assume point != 0 and that inner_res = +/-point. We obtain (scalar - 1) * point = +/-point =>
@@ -284,13 +277,13 @@ func ec_mul_inner{range_check_ptr}(point : EcPoint, scalar : felt, m : felt, p :
 end
 
 # Given a point and a 256-bit scalar, returns scalar * point.
-func ec_mul{range_check_ptr}(point : EcPoint, scalar : BigInt3, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
+func ec_mul{range_check_ptr}(point : EcPoint, scalar : BigInt3, a : BigInt3, p : BigInt3, secp_rem : felt) -> (res : EcPoint):
     alloc_locals
-    let (pow2_0 : EcPoint, local res0 : EcPoint) = ec_mul_inner(point, scalar.d0, 86, p, secp_rem)
-    let (pow2_1 : EcPoint, local res1 : EcPoint) = ec_mul_inner(pow2_0, scalar.d1, 86, p, secp_rem)
-    let (_, local res2 : EcPoint) = ec_mul_inner(pow2_1, scalar.d2, 84, p, secp_rem)
-    let (res : EcPoint) = ec_add(res0, res1, p, secp_rem)
-    let (res : EcPoint) = ec_add(res, res2, p, secp_rem)
+    let (pow2_0 : EcPoint, local res0 : EcPoint) = ec_mul_inner(point, scalar.d0, 86, a, p, secp_rem)
+    let (pow2_1 : EcPoint, local res1 : EcPoint) = ec_mul_inner(pow2_0, scalar.d1, 86, a, p, secp_rem)
+    let (_, local res2 : EcPoint) = ec_mul_inner(pow2_1, scalar.d2, 84, a, p, secp_rem)
+    let (res : EcPoint) = ec_add(res0, res1, a, p, secp_rem)
+    let (res : EcPoint) = ec_add(res, res2, a, p, secp_rem)
     return (res)
 end
 
@@ -300,38 +293,35 @@ end
 # we use `G` to compare.
 # y_G^2 - y_pt^2 = x_G^3 - x_pt^3 + a(x_G - x_pt) =>
 # (y_G - y_pt)(y_G + y_pt) = (x_G^2 + x_G*x_pt + x_pt^2 + a)(x_G - x_pt)
-func verify_point{range_check_ptr}(pt: EcPoint):
-    let GX = BigInt3(GX0, GX1, GX2)
-    let P = BigInt3(P0, P1, P2)
-
-    let (gx2) = bigint_mul(GX, GX)
-    let (gkx_prod) = bigint_mul(pt.x, GX)
+func verify_point{range_check_ptr}(pt: EcPoint, g : EcPoint, a : BigInt3, p : BigInt3):
+    let (gx2) = bigint_mul(g.x, g.x)
+    let (gkx_prod) = bigint_mul(pt.x, g.x)
     let (kx2) = bigint_mul(pt.x, pt.x)
 
     let (q) = bigint_div_mod(
         UnreducedBigInt5(
-            d0 = gx2.d0 + gkx_prod.d0 + kx2.d0 + A0,
-            d1 = gx2.d1 + gkx_prod.d1 + kx2.d1 + A1,
-            d2 = gx2.d2 + gkx_prod.d2 + kx2.d2 + A2,
+            d0 = gx2.d0 + gkx_prod.d0 + kx2.d0 + a.d0,
+            d1 = gx2.d1 + gkx_prod.d1 + kx2.d1 + a.d1,
+            d2 = gx2.d2 + gkx_prod.d2 + kx2.d2 + a.d2,
             d3 = gx2.d3 + gkx_prod.d3 + kx2.d3,
             d4 = gx2.d4 + gkx_prod.d4 + kx2.d4
-        ), UnreducedBigInt3(1, 0, 0), P)
+        ), UnreducedBigInt3(1, 0, 0), p)
 
     # check left == right
     let gky_diff = BigInt3(
-        d0 = GY0 - pt.y.d0,
-        d1 = GY1 - pt.y.d1,
-        d2 = GY2 - pt.y.d2
+        d0 = g.y.d0 - pt.y.d0,
+        d1 = g.y.d1 - pt.y.d1,
+        d2 = g.y.d2 - pt.y.d2
     )
     let gky_sum = BigInt3(
-        d0 = GY0 + pt.y.d0,
-        d1 = GY1 + pt.y.d1,
-        d2 = GY2 + pt.y.d2
+        d0 = g.y.d0 + pt.y.d0,
+        d1 = g.y.d1 + pt.y.d1,
+        d2 = g.y.d2 + pt.y.d2
     )
     let gkx_diff = BigInt3(
-        d0 = GX0 - pt.x.d0,
-        d1 = GX1 - pt.x.d1,
-        d2 = GX2 - pt.x.d2
+        d0 = g.x.d0 - pt.x.d0,
+        d1 = g.x.d1 - pt.x.d1,
+        d2 = g.x.d2 - pt.x.d2
     )
     let (left_diff) = bigint_mul(gky_diff, gky_sum)
     let (right_diff) = bigint_mul(q, gkx_diff)
@@ -343,7 +333,7 @@ func verify_point{range_check_ptr}(pt: EcPoint):
         d2 = left_diff.d2 - right_diff.d2,
         d3 = left_diff.d3 - right_diff.d3,
         d4 = left_diff.d4 - right_diff.d4,
-    ), P)
+    ), p)
 
     return ()
 end
