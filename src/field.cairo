@@ -1,34 +1,23 @@
 # From: https://github.com/EulerSmile/common-ec-cairo
 
 from starkware.cairo.common.math import assert_nn_le, assert_not_zero
-from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
+from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3
 from starkware.cairo.common.cairo_secp.constants import BASE
 
-from src.bigint import bigint_div_mod
+# SECP_REM is defined by the equation:
+#   secp256r1_prime = 2 ** 256 - SECP_REM.
+const SECP_REM = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001
 
-#return 1 if x ==0 mod n
-func is_urbigInt3_zero{range_check_ptr}(x : BigInt3, n : BigInt3) -> (res : felt):
-    let (xn) = bigint_div_mod(UnreducedBigInt5(d0=x.d0, d1=x.d1, d2=x.d2, 0, 0), UnreducedBigInt3(1, 0, 0), n)
-    if xn.d0 == 0:
-        if xn.d1 == 0:
-            if xn.d2 == 0:
-                return (res = 1)
-            end
-        end
-    end
-    return (res = 0)
-end
-
-# Verifies that the given unreduced value is equal to zero modulo the secp256k1 prime.
+# Verifies that the given unreduced value is equal to zero modulo the secp256r1 prime.
 #
 # Completeness assumption: val's limbs are in the range (-2**210.99, 2**210.99).
 # Soundness assumption: val's limbs are in the range (-2**250, 2**250).
-func verify_zero{range_check_ptr}(val : UnreducedBigInt3, P: BigInt3):
+func verify_zero{range_check_ptr}(val : UnreducedBigInt3, p : BigInt3):
     let q = [ap]
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
-        P = pack(ids.P, PRIME)
-        q, r = divmod(pack(ids.val, PRIME), P)
+        p = pack(ids.p, PRIME)
+        q, r = divmod(pack(ids.val, PRIME), p)
         assert r == 0, f"verify_zero: Invalid input {ids.val.d0, ids.val.d1, ids.val.d2}."
         ids.q = q % PRIME
     %}
@@ -60,4 +49,81 @@ func verify_zero{range_check_ptr}(val : UnreducedBigInt3, P: BigInt3):
 
     let range_check_ptr = range_check_ptr + 3
     return ()
+end
+
+# Computes the multiplication of two big integers, given in BigInt3 representation, modulo the
+# secp256k1 prime.
+#
+# Arguments:
+#   x, y - the two BigInt3 to operate on.
+#
+# Returns:
+#   x * y in an UnreducedBigInt3 representation (the returned limbs may be above 3 * BASE).
+#
+# If each of the input limbs is in the range (-x, x), the result's limbs are guaranteed to be
+# in the range (-x**2 * (2 ** 35.01), x**2 * (2 ** 35.01)) since log(8 * SECP_REM + 1) < 35.01.
+#
+# This means that if unreduced_mul is called on the result of nondet_bigint3, or the difference
+# between two such results, we have:
+#   Soundness guarantee: the limbs are in the range (-2**210.18, 2**210.18).
+#   Completeness guarantee: the limbs are in the range (-2**207.01, 2**207.01).
+func unreduced_mul(a : BigInt3, b : BigInt3) -> (res_low : UnreducedBigInt3):
+    # The result of the product is:
+    #   sum_{i, j} a.d_i * b.d_j * BASE**(i + j)
+    # Since we are computing it mod secp256k1_prime, we replace the term
+    #   a.d_i * b.d_j * BASE**(i + j)
+    # where i + j >= 3 with
+    #   a.d_i * b.d_j * BASE**(i + j - 3) * 4 * SECP_REM
+    # since BASE ** 3 = 4 * SECP_REM (mod secp256k1_prime).
+    return (
+        UnreducedBigInt3(
+        d0=a.d0 * b.d0 + (a.d1 * b.d2 + a.d2 * b.d1) * (4 * SECP_REM),
+        d1=a.d0 * b.d1 + a.d1 * b.d0 + (a.d2 * b.d2) * (4 * SECP_REM),
+        d2=a.d0 * b.d2 + a.d1 * b.d1 + a.d2 * b.d0),
+    )
+end
+
+# Computes the square of a big integer, given in BigInt3 representation, modulo the
+# secp256k1 prime.
+#
+# Has the same guarantees as in unreduced_mul(a, a).
+func unreduced_sqr(a : BigInt3) -> (res_low : UnreducedBigInt3):
+    tempvar twice_d0 = a.d0 * 2
+    return (
+        UnreducedBigInt3(
+        d0=a.d0 * a.d0 + (a.d1 * a.d2) * (2 * 4 * SECP_REM),
+        d1=twice_d0 * a.d1 + (a.d2 * a.d2) * (4 * SECP_REM),
+        d2=twice_d0 * a.d2 + a.d1 * a.d1),
+    )
+end
+
+# Returns 1 if x == 0 (mod secp256k1_prime), and 0 otherwise.
+#
+# Completeness assumption: x's limbs are in the range (-BASE, 2*BASE).
+# Soundness assumption: x's limbs are in the range (-2**107.49, 2**107.49).
+func is_zero{range_check_ptr}(x : BigInt3, p : BigInt3) -> (res : felt):
+    %{
+        from starkware.cairo.common.cairo_secp.secp_utils import pack
+        p = pack(ids.p, PRIME)
+        x = pack(ids.x, PRIME) % p
+    %}
+    if nondet %{ x == 0 %} != 0:
+        verify_zero(UnreducedBigInt3(d0=x.d0, d1=x.d1, d2=x.d2), p)
+        return (res=1)
+    end
+
+    %{
+        from starkware.python.math_utils import div_mod
+
+        value = x_inv = div_mod(1, x, p)
+    %}
+    let (x_inv) = nondet_bigint3()
+    let (x_x_inv) = unreduced_mul(x, x_inv)
+
+    # Check that x * x_inv = 1 to verify that x != 0.
+    verify_zero(UnreducedBigInt3(
+        d0=x_x_inv.d0 - 1,
+        d1=x_x_inv.d1,
+        d2=x_x_inv.d2), p)
+    return (res=0)
 end

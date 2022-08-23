@@ -5,7 +5,6 @@ from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, 
 from starkware.cairo.common.cairo_secp.constants import BASE
 from starkware.cairo.common.cairo_secp.ec import EcPoint
 
-from src.bigint import bigint_div_mod
 from src.param_def import  N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2
 from src.ec import ec_add, ec_mul, verify_point
 
