@@ -5,7 +5,7 @@ from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, 
 from starkware.cairo.common.cairo_secp.constants import BASE
 from starkware.cairo.common.cairo_secp.ec import EcPoint
 
-from src.param_def import  N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2
+from src.param_def import P0, P1, P2, N0, N1, N2, GX0, GX1, GX2, GY0, GY1, GY2, SECP_REM
 from src.ec import ec_add, ec_mul, verify_point
 
 
@@ -103,9 +103,11 @@ func verify_ecdsa{range_check_ptr}(
     let (u1 : BigInt3) = div_mod_n(msg_hash, s, N)
     let (u2 : BigInt3) = div_mod_n(r, s, N)
 
-    let (gen_u1) = ec_mul(gen_pt, u1)
-    let (pub_u2) = ec_mul(public_key_pt, u2)
-    let (res) = ec_add(gen_u1, pub_u2)
+
+    let P = BigInt3(P0, P1, P2)
+    let (gen_u1) = ec_mul(gen_pt, u1, P, SECP_REM)
+    let (pub_u2) = ec_mul(public_key_pt, u2, P, SECP_REM)
+    let (res) = ec_add(gen_u1, pub_u2, P, SECP_REM)
 
     # The following assert also implies that res is not the zero point.
     assert res.x = r
