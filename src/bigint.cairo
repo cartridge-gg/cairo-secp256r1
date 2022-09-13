@@ -16,7 +16,7 @@ func bigint_mul_u(x: UnreducedBigInt3, y: BigInt3) -> (res: UnreducedBigInt5):
 end
 
 # Returns (x / y) % P
-func bigint_div_mod{range_check_ptr}(x: UnreducedBigInt5, y: UnreducedBigInt3, P: BigInt3) -> (res: BigInt3):
+func bigint_div_mod{range_check_ptr}(x: UnreducedBigInt5, y: UnreducedBigInt3, p: BigInt3) -> (res: BigInt3):
     alloc_locals
     local flag
     %{
@@ -24,7 +24,7 @@ func bigint_div_mod{range_check_ptr}(x: UnreducedBigInt5, y: UnreducedBigInt3, P
         from starkware.cairo.common.math_utils import as_int
         from starkware.python.math_utils import div_mod, safe_div
 
-        p = pack(ids.P, PRIME)
+        p = pack(ids.p, PRIME)
         x = pack(ids.x, PRIME) + as_int(ids.x.d3, PRIME) * ids.BASE ** 3 + as_int(ids.x.d4, PRIME) * ids.BASE ** 4
         y = pack(ids.y, PRIME)
 
@@ -39,7 +39,7 @@ func bigint_div_mod{range_check_ptr}(x: UnreducedBigInt5, y: UnreducedBigInt3, P
     %}
     let (k) = nondet_bigint3()
     let (res_y) = bigint_mul_u(y, res)
-    let (k_p) = bigint_mul(k, P)
+    let (k_p) = bigint_mul(k, p)
 
     tempvar carry1 = (res_y.d0 - (2 * flag - 1) * k_p.d0 - x.d0) / BASE
     assert [range_check_ptr + 0] = carry1 + 2 ** 127

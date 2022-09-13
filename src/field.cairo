@@ -4,6 +4,8 @@ from starkware.cairo.common.math import assert_nn_le, assert_not_zero
 from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5, nondet_bigint3, bigint_mul
 from starkware.cairo.common.cairo_secp.constants import BASE
 
+from src.bigint import bigint_div_mod
+
 # Verifies that the given unreduced value is equal to zero modulo the secp256r1 prime.
 #
 # Completeness assumption: val's limbs are in the range (-2**210.99, 2**210.99).
@@ -55,27 +57,53 @@ end
 #
 # Returns:
 #   x * y in an UnreducedBigInt3 representation (the returned limbs may be above 3 * BASE).
-#
-# If each of the input limbs is in the range (-x, x), the result's limbs are guaranteed to be
-# in the range (-x**2 * (2 ** 35.01), x**2 * (2 ** 35.01)) since log(8 * secp_rem + 1) < 35.01.
-#
-# This means that if unreduced_mul is called on the result of nondet_bigint3, or the difference
-# between two such results, we have:
-#   Soundness guarantee: the limbs are in the range (-2**210.18, 2**210.18).
-#   Completeness guarantee: the limbs are in the range (-2**207.01, 2**207.01).
-func unreduced_mul(a : BigInt3, b : BigInt3, secp_rem : felt) -> (res_low : UnreducedBigInt3):
-    # The result of the product is:
-    #   sum_{i, j} a.d_i * b.d_j * BASE**(i + j)
-    # Since we are computing it mod secp256k1, we replace the term
-    #   a.d_i * b.d_j * BASE**(i + j)
-    # where i + j >= 3 with
-    #   a.d_i * b.d_j * BASE**(i + j - 3) * 4 * secp_rem
-    # since BASE ** 3 = 4 * secp_rem (mod secp256k1).
-    return (
-        UnreducedBigInt3(
-        d0=a.d0 * b.d0 + (a.d1 * b.d2 + a.d2 * b.d1) * (4 * secp_rem),
-        d1=a.d0 * b.d1 + a.d1 * b.d0 + (a.d2 * b.d2) * (4 * secp_rem),
-        d2=a.d0 * b.d2 + a.d1 * b.d1 + a.d2 * b.d0),
+func unreduced_mul{range_check_ptr}(a : BigInt3, b : BigInt3, p : BigInt3) -> (res_low : UnreducedBigInt3):
+    alloc_locals
+    local flag
+    let (x) = bigint_mul(a, b)
+    %{
+        from starkware.cairo.common.cairo_secp.secp_utils import pack
+        from starkware.cairo.common.math_utils import as_int
+        from starkware.python.math_utils import div_mod
+
+        p = pack(ids.p, PRIME)
+        x = pack(ids.x, PRIME) + as_int(ids.x.d3, PRIME) * ids.BASE ** 3 + as_int(ids.x.d4, PRIME) * ids.BASE ** 4
+        y = 1
+        value = res = div_mod(x, 1, p)
+    %}
+    let (res) = nondet_bigint3()
+
+    %{
+        k = safe_div(res * y - x, p)
+        value = k if k > 0 else 0 - k
+        ids.flag = 1 if k > 0 else 0
+    %}
+    let (k) = nondet_bigint3()
+
+    tempvar res_y = UnreducedBigInt5(
+        d0=1 * res.d0,
+        d1=1 * res.d1,
+        d2=1 * res.d2,
+        d3=0,
+        d4=0
+    )
+    let (k_p) = bigint_mul(k, p)
+
+    tempvar carry1 = (res_y.d0 - (2 * flag - 1) * k_p.d0 - x.d0) / BASE
+    assert [range_check_ptr + 0] = carry1 + 2 ** 127
+
+    tempvar carry2 = (res_y.d1 - (2 * flag - 1) * k_p.d1 - x.d1 + carry1) / BASE
+    assert [range_check_ptr + 1] = carry2 + 2 ** 127
+
+    tempvar carry3 = (res_y.d2 - (2 * flag - 1) * k_p.d2 - x.d2 + carry2) / BASE
+    assert [range_check_ptr + 2] = carry3 + 2 ** 127
+
+    let range_check_ptr = range_check_ptr + 3
+
+    return (UnreducedBigInt3(
+        d0=res.d0,
+        d1=res.d1,
+        d2=res.d2)
     )
 end
 
@@ -83,13 +111,13 @@ end
 # secp256k1 prime.
 #
 # Has the same guarantees as in unreduced_mul(a, a).
-func unreduced_sqr(a : BigInt3, secp_rem : felt) -> (res_low : UnreducedBigInt3):
-    tempvar twice_d0 = a.d0 * 2
+func unreduced_sqr{range_check_ptr}(a : BigInt3, p : BigInt3) -> (res_low : UnreducedBigInt3):
+    let (res) = unreduced_mul(a, a, p)
     return (
         UnreducedBigInt3(
-        d0=a.d0 * a.d0 + (a.d1 * a.d2) * (2 * 4 * secp_rem),
-        d1=twice_d0 * a.d1 + (a.d2 * a.d2) * (4 * secp_rem),
-        d2=twice_d0 * a.d2 + a.d1 * a.d1),
+        d0=res.d0,
+        d1=res.d1,
+        d2=res.d2)
     )
 end
 
@@ -114,7 +142,7 @@ func is_zero{range_check_ptr}(x : BigInt3, p : BigInt3, secp_rem : felt) -> (res
         value = x_inv = div_mod(1, x, p)
     %}
     let (x_inv) = nondet_bigint3()
-    let (x_x_inv) = unreduced_mul(x, x_inv, secp_rem)
+    let (x_x_inv) = unreduced_mul(x, x_inv, p)
 
     # Check that x * x_inv = 1 to verify that x != 0.
     verify_zero(UnreducedBigInt3(

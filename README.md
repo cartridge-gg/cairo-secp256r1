@@ -24,3 +24,12 @@ protostar test
 ```
 
 Extension of the implementation at: https://github.com/EulerSmile/common-ec-cairo
+
+## Futher improvement
+
+
+
+
+- Since higher than 86bit, move part to a higher limb, replace something on order of 192bits. Move some of the values to d1. (ruled out?)
+- Move to montgomery: R = 2^86
+- Move to 5 limb unreduced

@@ -33,8 +33,8 @@ func compute_doubling_slope{range_check_ptr}(point : EcPoint, p : BigInt3, a : B
     %}
     let (slope : BigInt3) = nondet_bigint3()
 
-    let (x_sqr : UnreducedBigInt3) = unreduced_sqr(point.x, secp_rem)
-    let (slope_y : UnreducedBigInt3) = unreduced_mul(slope, point.y, secp_rem)
+    let (x_sqr : UnreducedBigInt3) = unreduced_sqr(point.x, p)
+    let (slope_y : UnreducedBigInt3) = unreduced_mul(slope, point.y, p)
 
     verify_zero(
         UnreducedBigInt3(
@@ -76,7 +76,7 @@ func compute_slope{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigI
     let x_diff = BigInt3(
         d0=point0.x.d0 - point1.x.d0, d1=point0.x.d1 - point1.x.d1, d2=point0.x.d2 - point1.x.d2
     )
-    let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(x_diff, slope, secp_rem)
+    let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(x_diff, slope, p)
 
     verify_zero(
         UnreducedBigInt3(
@@ -106,7 +106,7 @@ func ec_double{range_check_ptr}(point : EcPoint, a : BigInt3, p : BigInt3, secp_
     end
 
     let (slope : BigInt3) = compute_doubling_slope(point, p, a, secp_rem)
-    let (slope_sqr : UnreducedBigInt3) = unreduced_sqr(slope, secp_rem)
+    let (slope_sqr : UnreducedBigInt3) = unreduced_sqr(slope, p)
 
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
@@ -130,7 +130,7 @@ func ec_double{range_check_ptr}(point : EcPoint, a : BigInt3, p : BigInt3, secp_
     )
 
     let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(
-        BigInt3(d0=point.x.d0 - new_x.d0, d1=point.x.d1 - new_x.d1, d2=point.x.d2 - new_x.d2), slope, secp_rem
+        BigInt3(d0=point.x.d0 - new_x.d0, d1=point.x.d1 - new_x.d1, d2=point.x.d2 - new_x.d2), slope, p
     )
 
     verify_zero(
@@ -174,7 +174,7 @@ func fast_ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigInt
     end
 
     let (slope : BigInt3) = compute_slope(point0, point1, p, secp_rem)
-    let (slope_sqr : UnreducedBigInt3) = unreduced_sqr(slope, secp_rem)
+    let (slope_sqr : UnreducedBigInt3) = unreduced_sqr(slope, p)
 
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
@@ -201,7 +201,7 @@ func fast_ec_add{range_check_ptr}(point0 : EcPoint, point1 : EcPoint, p : BigInt
 
     let (x_diff_slope : UnreducedBigInt3) = unreduced_mul(
         BigInt3(d0=point0.x.d0 - new_x.d0, d1=point0.x.d1 - new_x.d1, d2=point0.x.d2 - new_x.d2),
-        slope, secp_rem
+        slope, p
     )
 
     verify_zero(
@@ -346,6 +346,10 @@ end
 # * All the limbs of x are in the range (-2 ** 210.99, 2 ** 210.99).
 # * All the limbs of s are in the range (-2 ** 124.99, 2 ** 124.99).
 # * s is in the range [0, 2 ** 256).
+#
+# Soundness assumptions:
+# * The limbs of a are in the range (-2 ** 249, 2 ** 249).
+# * The limbs of b are in the range (-2 ** 159.83, 2 ** 159.83).
 func div_mod_n{range_check_ptr}(x : BigInt3, s : BigInt3, n : BigInt3) -> (res : BigInt3):
     %{
         from starkware.cairo.common.cairo_secp.secp_utils import pack
