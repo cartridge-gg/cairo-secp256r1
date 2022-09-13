@@ -1,4 +1,4 @@
-# From: https://github.com/EulerSmile/common-ec-cairo
+// From: https://github.com/EulerSmile/common-ec-cairo
 
 from starkware.cairo.common.math import assert_nn_le, assert_not_zero
 from starkware.cairo.common.cairo_secp.bigint import BigInt3, UnreducedBigInt3, UnreducedBigInt5
@@ -6,20 +6,22 @@ from starkware.cairo.common.cairo_secp.constants import BASE
 
 from src.bigint import bigint_div_mod, verify_urbigint5_zero
 
-func verify_urbigInt3_zero{range_check_ptr}(val : UnreducedBigInt3, n : BigInt3):
-    verify_urbigint5_zero(UnreducedBigInt5(d0=val.d0, d1=val.d1, d2=val.d2, 0, 0), n)
-    return ()
-end
+func verify_urbigInt3_zero{range_check_ptr}(val: UnreducedBigInt3, n: BigInt3) {
+    verify_urbigint5_zero(UnreducedBigInt5(d0=val.d0, d1=val.d1, d2=val.d2, 0, 0), n);
+    return ();
+}
 
-#return 1 if x ==0 mod n
-func is_urbigInt3_zero{range_check_ptr}(x : BigInt3, n : BigInt3) -> (res : felt):
-    let (xn) = bigint_div_mod(UnreducedBigInt5(d0=x.d0, d1=x.d1, d2=x.d2, 0, 0), UnreducedBigInt3(1, 0, 0), n)
-    if xn.d0 == 0:
-        if xn.d1 == 0:
-            if xn.d2 == 0:
-                return (res = 1)
-            end
-        end
-    end
-    return (res = 0)
-end
+// return 1 if x ==0 mod n
+func is_urbigInt3_zero{range_check_ptr}(x: BigInt3, n: BigInt3) -> (res: felt) {
+    let (xn) = bigint_div_mod(
+        UnreducedBigInt5(d0=x.d0, d1=x.d1, d2=x.d2, 0, 0), UnreducedBigInt3(1, 0, 0), n
+    );
+    if (xn.d0 == 0) {
+        if (xn.d1 == 0) {
+            if (xn.d2 == 0) {
+                return (res=1);
+            }
+        }
+    }
+    return (res=0);
+}

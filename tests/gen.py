@@ -22,17 +22,17 @@ from src.ecdsa import verify_ecdsa
 
 TEST_CASE = """
 @view
-func test_{title}{{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}}():
+func test_{title}{{syscall_ptr : felt*, range_check_ptr, pedersen_ptr : HashBuiltin*}}() {
     {expect_revert}
     let public_key_pt = EcPoint(
         BigInt3({x0},{x1},{x2}),
-        BigInt3({y0},{y1},{y2}))
-    let r = BigInt3({r0},{r1},{r2})
-    let s = BigInt3({s0},{s1},{s2})
-    let msg_hash = BigInt3({m0},{m1},{m2})
-    verify_ecdsa(public_key_pt=public_key_pt, msg_hash=msg_hash, r=r, s=s)
-    return ()
-end
+        BigInt3({y0},{y1},{y2}));
+    let r = BigInt3({r0},{r1},{r2});
+    let s = BigInt3({s0},{s1},{s2});
+    let msg_hash = BigInt3({m0},{m1},{m2});
+    verify_ecdsa(public_key_pt=public_key_pt, msg_hash=msg_hash, r=r, s=s);
+    return ();
+}
 """
 
 
