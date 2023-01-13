@@ -14,6 +14,24 @@ let msg_hash = BigInt3(0x100377dbc4e7a6a133ec56,0x25c813f825413878bbec6a,0x44acf
 verify_ecdsa(public_key_pt=public_key_pt, msg_hash=msg_hash, r=r, s=s)
 ```
 
+
+
+## Note about the fork
+The aim of this fork from cartridge  repo is the optimization of ECDSA by Shamir's trick and Windowing.
+ The trick is also implemented for stark curve and secp256k1 here (PR139 in starkware repo):
+https://github.com/rdubois-crypto/MyCairoPlayground/tree/main/Cairo
+
+The result obtained by benching the new optimed versus previous standard implementation is given by --print-info:
+ ECDSA optimized  over sec256r1
+Number of steps: 222828 (originally, 222828)
+Used memory cells: 231500
+
+ ECDSA standard implementation over sec256r1
+Number of steps: 388286 (originally, 388286)
+Used memory cells: 402221
+
+
+
 ## Development
 
 The library uses [Protostar](https://docs.swmansion.com/protostar/) for development.
