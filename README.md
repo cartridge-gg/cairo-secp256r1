@@ -23,11 +23,15 @@ https://github.com/rdubois-crypto/MyCairoPlayground/tree/main/Cairo
 
 The result obtained by benching the new optimed versus previous standard implementation is given by --print-info:
  ECDSA optimized  over sec256r1
+ 
 Number of steps: 222828 (originally, 222828)
+
 Used memory cells: 231500
 
  ECDSA standard implementation over sec256r1
+ 
 Number of steps: 388286 (originally, 388286)
+
 Used memory cells: 402221
 
 
